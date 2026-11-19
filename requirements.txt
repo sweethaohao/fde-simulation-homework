@@ -1,0 +1,35 @@
+# 门店补货与库存协同 · 智能体 MVP 运行依赖
+# 环境：Windows + Python 3.13.14（本机实测），安装在仓库根目录 .venv/
+# 安装：python -m venv .venv && ./.venv/Scripts/python.exe -m pip install -r requirements.txt
+# 版本均为 2026-11-19 在本机实际安装并验证通过的版本，不要随意升级大版本
+
+# Web 框架与 ASGI 服务器（技术栈锁定项，不得替换为 Flask/Django）
+fastapi==0.165.0
+uvicorn==0.54.0
+
+# 数据校验与配置
+# pydantic v2 用于请求/响应模型；pydantic-settings 负责从环境变量覆盖 config.yaml
+pydantic==2.14.3
+pydantic-settings==2.16.3
+
+# HTTP 客户端：调用本地 Ollama 的 /api/chat 与 /api/embed
+httpx==0.28.1
+
+# 配置文件解析（config.yaml）
+PyYAML==6.0.3
+
+# JWT 签发与校验（纯 Python 实现，无需编译依赖，避免 py3.13 轮子问题）
+# 不使用 passlib+bcrypt：bcrypt 在 py3.13 上编译易失败，密码哈希改用标准库 hashlib.scrypt
+PyJWT==2.15.1
+
+# 表单与文件上传解析（登录表单、CSV 导入）
+python-multipart==0.0.34
+
+# 模板渲染（单页前端如需服务端注入初始变量时使用；纯静态托管也可不依赖）
+Jinja2==3.1.6
+
+# 自测
+pytest==9.2.0
+
+# 说明：数据库使用标准库 sqlite3（3.53.1，已实测支持 FTS5、JSON1、递归 CTE），
+# 不引入 SQLAlchemy / Alembic / Neo4j / Redis / 任何向量数据库。
