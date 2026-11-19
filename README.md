@@ -20,15 +20,29 @@
 
 ```
 .
-├── docs/                    老师要求的 5 个平台导出文件（原始记录，未改写）
-│   └── 作业内容分析/          本人撰写的分析文档（5 份）
-├── src/                     后续阶段的模拟项目代码（当前为空，见 src/README.md）
-├── README.md
+├── docs/                    老师要求的平台导出文件（原始记录，未改写）+ 阶段 03 报告
+│   ├── 作业内容分析/          本人撰写的分析文档（5 份）
+│   └── assets/              演示截图（录屏另存，不入库）
+├── src/                     模拟项目代码（阶段 03 起）
+│   ├── app/                 FastAPI 服务：路由、鉴权、Agent、图谱、审计
+│   └── web/                 单页前端（原生 HTML/CSS/JS，无构建）
+├── scripts/                 数据生成、建库、启动、冒烟
+├── data/seed/               合成数据 CSV（可提交）；data/*.db 为运行产物，已忽略
+├── tests/                   pytest 用例
+├── BUILD_PROMPT.md          **交给编码 Agent 的 MVP 施工图**（先读这个）
+├── config.example.yaml      配置模板（复制为 config.yaml 后填写）
+├── .env.example            密钥模板（APP_JWT_SECRET）
+├── requirements.txt         已锁定版本的 Python 依赖
+├── README.md  DEMO.md
 ├── LICENSE
 └── .gitignore
 ```
 
-**为什么 `docs/` 下要分两层**：`docs/` 根目录的 5 个文件是平台按作业要求直接导出的，属于原始记录，不能改动也不能混入其他内容；本人写的分析文档统一放在 `docs/作业内容分析/` 下，便于区分"平台给的"和"我写的"。
+**为什么 `docs/` 下要分两层**：`docs/` 根目录的文件是平台按作业要求直接导出的，属于原始记录，不能改动也不能混入其他内容；本人写的分析文档统一放在 `docs/作业内容分析/` 下，便于区分"平台给的"和"我写的"。
+
+**为什么提示词要分两份**：`BUILD_PROMPT.md` 在仓库根，是**施工图**，给编码 Agent 用，一次交付整套 MVP；`docs/门店补货与库存协同-智能体系统-提示词.md` 是阶段 03 的**作业提交件**（老师要求的提问式提示词集）。两者用途不同，不要混用。
+
+> 上面目录树中，`docs/`、`README.md`、`LICENSE`、`requirements.txt`、`BUILD_PROMPT.md`、`config.example.yaml`、`.env.example` 已存在；`src/app`、`src/web`、`scripts`、`data/seed`、`tests`、`docs/assets` 由 MVP 构建阶段按 [`BUILD_PROMPT.md`](BUILD_PROMPT.md) 第 6 节生成，当前尚未创建。
 
 ## 进度
 
@@ -40,7 +54,9 @@
 | 02 现场调研 | 1 开展角色访谈 | [`docs/作业内容分析/02-1-interview-record-role-map.md`](docs/作业内容分析/02-1-interview-record-role-map.md) | 已完成 |
 | | 2 还原现状流程 | [`docs/作业内容分析/02-2-current-process-flow.md`](docs/作业内容分析/02-2-current-process-flow.md) + [流程图 PNG](docs/02-2-current-process-flow.png) | 已完成 |
 | | 3 四来源收敛与材料核对 | [`docs/作业内容分析/02-3-four-source-convergence.md`](docs/作业内容分析/02-3-four-source-convergence.md) | 已完成 |
-| 03 需求定义 | — | `src/` | 未开始 |
+| 03 需求定义 | 系统方案报告 | [`docs/门店补货与库存协同-智能体系统方案报告.docx`](docs/门店补货与库存协同-智能体系统方案报告.docx) | 已完成 |
+| | 提问式提示词集 | [`docs/门店补货与库存协同-智能体系统-提示词.md`](docs/门店补货与库存协同-智能体系统-提示词.md) | 已完成 |
+| | MVP 构建 | [`BUILD_PROMPT.md`](BUILD_PROMPT.md) → `src/` | **构建中** |
 
 ## 文档索引
 
@@ -63,6 +79,33 @@
 | `02-1-interview-record-role-map.md` | 访谈记录与角色地图 | 36 条线索全覆盖，但 0 个日期、0 张单据、0 个数量样本；8 条矛盾集中在归因与责任；六方共同否定「预测不准」这一客户假设 |
 | `02-2-current-process-flow.md` | 现状流程图与异常路径 | 产品介入前的瑕疵现状：6 泳道 × 11 步；4 个交接点仅签收有可信时间戳；6 类异常中 3 类不留痕；7 处瓶颈逐一标出责任人 |
 | `02-3-four-source-convergence.md` | 四来源收敛表、证据台账与问题清单 | 四来源未收敛到同一瓶颈，而是收敛到同一前提「可售库存没有可信定义」；三方互证、一方孤立；33 条陈述 0 单据 0 日志 0 观察 0 版本号；时间窗/版本/样本三项口径全部不一致 |
+
+## MVP 构建（阶段 03）
+
+**入口只有一个：[`BUILD_PROMPT.md`](BUILD_PROMPT.md)。** 把整份文件交给编码 Agent，它会按四阶段产出可运行的服务。
+
+### 谁需要什么
+
+| 角色 | 拿去用什么 |
+|---|---|
+| 编码 Agent | `BUILD_PROMPT.md` 全文 + 本仓库代码所有权 |
+| 人 | 读 `README.md`（本节）+ `DEMO.md`（演示动线） |
+
+### 为什么仓库里没有 Ollama
+
+模型是**运行时依赖**，不是代码。仓库只保留可复现的部分：代码、配置模板、依赖清单、合成数据、脚本。
+
+```bash
+python -m venv .venv && ./.venv/Scripts/python.exe -m pip install -r requirements.txt
+ollama pull qwen3.5:9b && ollama pull nomic-embed-text   # 需本机已装 Ollama
+cp .env.example .env                                      # 填 APP_JWT_SECRET
+python scripts/gen_data.py && python scripts/init_db.py && python scripts/seed_graph.py
+scripts/run_prod.bat                                      # http://127.0.0.1:8000
+```
+
+### 部署形态（说明清楚，避免误解）
+
+本仓库**不提供公网在线地址**。服务运行在本机/局域网：`http://10.51.79.169:8000`。原因是本地推理依赖 Ollama + 显卡，无法托管在 GitHub Pages 或普通静态托管上。验收证据 = 本机生产模式启动 + 局域网可访问 + `DEMO.md` 演示动线 + `docs/assets/` 截图。
 
 ## 证据与标注约定
 
@@ -93,7 +136,7 @@
 
 - 全部文档为 Markdown，无依赖，可直接阅读
 - 现状流程图为 3880×2340 PNG。生成方式为 Python + Pillow 按坐标绘制（Windows 下浏览器无头截图被系统策略拦截，故未采用 HTML 转截图）；绘制时带文字宽度越界检测，避免溢出
-- `src/` 后续代码的依赖见各子目录说明
+- MVP 依赖见 `requirements.txt`（已锁定版本），配置项见 `config.example.yaml`
 
 ## 许可
 
