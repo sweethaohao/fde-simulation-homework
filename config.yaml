@@ -1,0 +1,56 @@
+# 运行配置：所有可配置项集中于此，代码中只读 settings.xxx，不出现密钥/地址/端口字面量。
+# 环境变量可覆盖：APP_ENV / APP_HOST / APP_PORT / APP_DB_PATH / OLLAMA_BASE_URL / APP_LLM_TIMEOUT / APP_LLM_CHAT_MODEL
+
+app:
+  name: "门店补货与库存协同 · MVP"
+  host: "0.0.0.0"                 # 生产模式绑全部网卡，供局域网访问
+  port: 8000
+  env: "prod"
+  data_scope_default: "store"     # 缺省最小数据域，避免默认放大权限
+
+db:
+  path: "data/mvp.db"             # 运行产物，已在 .gitignore 忽略
+
+llm:
+  base_url: "http://127.0.0.1:11434"
+  chat_model: "qwen3.5:9b"
+  embed_model: "nomic-embed-text"
+  think: false                    # 必须 false：qwen3.5 默认把内容写进 thinking，content 会为空
+  temperature: 0.2
+  num_ctx: 8192                   # 8GB 显存下超过此值会明显溢出到 CPU
+  num_predict: 420                # 单次生成上限，控制 30–37 tokens/s 下的等待时间
+  timeout_seconds: 120
+  max_context_chars: 6000         # 单次送入 LLM 的检索片段总量上限
+
+retrieval:
+  top_k: 6
+  vector_dim: 768                 # nomic-embed-text 实测维度
+  fallback: "fts5"                # 嵌入不可用时降级为关键词检索，不报错
+
+auth:
+  jwt_secret_env: "APP_JWT_SECRET"
+  token_ttl_minutes: 480
+  password_hash: "scrypt"
+
+guardrail:
+  enabled: true
+  stop_actions_on_hit: true       # 命中兜底即停，不返回建议量（f44）
+  manual_confirm_minutes: 120     # 兜底后人工确认时限，写进 stopped 响应
+
+audit:
+  retention_days: 90              # f43：到期归档，需 loss_manager 确认
+  redact_fields: ["password", "token", "secret", "phone", "id_card"]
+
+metrics:
+  signed_required: true           # R10：口径未签发不出数
+  stockout_window_days: 42        # 时长加权口径窗口
+  stockout_recent_days: 7         # 诊断用近期窗口
+
+replenishment:
+  lead_time_days: 2               # 配送前置期
+  cover_days: 7                   # 目标覆盖天数
+  safety_ratio: 0.30              # 安全库存比例
+  warehouse_cap_units: 240        # 单店单 SKU 单次分配上限（仓容压回演示）
+
+demo:
+  synthetic_banner: true          # 界面常驻「合成数据」横幅

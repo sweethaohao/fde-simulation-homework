@@ -1,0 +1,9 @@
+store_id,name,region,tier,delivery_calendar_version,is_synthetic
+S01,拾光·静安店,华东,high,DC-2026-09-v1,1
+S02,拾光·徐汇店,华东,high,DC-2026-09-v1,1
+S03,拾光·浦东店,华东,high,DC-2026-09-v1,1
+S04,拾光·长宁店,华东,medium,DC-2026-09-v1,1
+S05,拾光·普陀店,华东,medium,DC-2026-09-v1,1
+S06,拾光·虹口店,华东,medium,DC-2026-09-v1,1
+S07,拾光·杨浦店,华东,low,DC-2026-09-v1,1
+S08,拾光·闵行店,华东,low,,1

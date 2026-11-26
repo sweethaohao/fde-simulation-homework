@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<!-- 单页前端：登录 + 看板 / 溯源 / 建议与签核 / 管理与审计，无任何外链资源 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <!-- 移动端不缩放，桌面优先 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>门店补货与库存协同 · MVP</title>
+  <!-- 本地样式，禁止 CDN -->
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- 顶部常驻栏：品牌、合成数据横幅、当前用户 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">拾</span>
+      <div>
+        <div class="brand-title">门店补货与库存协同</div>
+        <div class="brand-sub">MVP · 人在环 · 只到待签核</div>
+      </div>
+    </div>
+    <!-- 合成数据横幅：所有视图常驻（BUILD_PROMPT 第 10 节） -->
+    <div class="banner" id="synthetic-banner">本系统全部数据为合成数据，仅用于演示；不存在下单接口，签核后才产生业务动作</div>
+    <div class="userbox" id="userbox" hidden>
+      <span class="user-name" id="user-name">未登录</span>
+      <span class="user-role" id="user-role"></span>
+      <button class="btn btn-ghost btn-sm" id="logout-btn" type="button">退出</button>
+    </div>
+  </header>
+
+  <!-- 登录页：账号口令 + 演示账号快捷填充 -->
+  <section class="login-wrap" id="login-view">
+    <form class="login-card" id="login-form" autocomplete="off">
+      <h1>登录</h1>
+      <p class="muted">七个合成角色覆盖管理员 / 运营总监 / 商品与损耗经理 / 补货计划员 / 店长 / 区域物流 / 数据工程师。</p>
+      <label class="field">
+        <span>账号</span>
+        <input id="login-username" name="username" required placeholder="例如 gu.minglan" />
+      </label>
+      <label class="field">
+        <span>口令</span>
+        <input id="login-password" name="password" type="password" required placeholder="演示口令 Demo@2026" />
+      </label>
+      <button class="btn btn-primary btn-block" type="submit" id="login-submit">登录</button>
+      <div class="login-error" id="login-error" hidden></div>
+      <!-- 演示账号：点击自动填充，免去手抄 -->
+      <div class="demo-accounts">
+        <div class="muted small">演示账号（统一口令 Demo@2026，点击填充）</div>
+        <div class="chip-row" id="demo-accounts">
+          <button type="button" class="chip" data-user="admin">admin · 管理员</button>
+          <button type="button" class="chip" data-user="gu.minglan">顾明岚 · 运营总监</button>
+          <button type="button" class="chip" data-user="fu.jing">傅景 · 商品与损耗</button>
+          <button type="button" class="chip" data-user="tang.yingqiu">唐映秋 · 计划员</button>
+          <button type="button" class="chip" data-user="lin.yizhou">林亦舟 · 店长 S01</button>
+          <button type="button" class="chip" data-user="ye.shu">叶书 · 区域物流</button>
+          <button type="button" class="chip" data-user="qin.rui">秦芮 · 数据工程</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <!-- 登录后的主壳体：导航 + 四个视图 -->
+  <div class="shell" id="shell" hidden>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-view="dashboard" type="button">诊断看板</button>
+      <button class="tab" data-view="trace" type="button">图谱溯源</button>
+      <button class="tab" data-view="replenish" type="button">建议与签核</button>
+      <button class="tab" data-view="admin" type="button">管理与审计</button>
+    </nav>
+
+    <main class="content">
+      <!-- 视图一：诊断看板 -->
+      <section class="view active" id="view-dashboard">
+        <div class="view-head">
+          <div>
+            <h2>诊断看板</h2>
+            <p class="muted" id="dashboard-meta">加载中…</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="dashboard-refresh" type="button">刷新</button>
+        </div>
+        <!-- 数据域提示 -->
+        <div class="scope-line" id="dashboard-scope"></div>
+        <!-- 关键数字卡片 -->
+        <div class="grid grid-4" id="dashboard-cards"></div>
+        <!-- 被拦截指标：原因 + 签发人，不填估算值 -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>被拦截的指标</h3>
+            <span class="muted small">R10：口径未签发不出数；数据不足显示 DATA_NOT_READY</span>
+          </div>
+          <div id="dashboard-blocked" class="blocked-list"></div>
+        </div>
+        <!-- 账实差异拆分与就绪度 -->
+        <div class="grid grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>账实差异拆分</h3></div>
+            <div id="dashboard-diff"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>数据就绪度</h3></div>
+            <div id="dashboard-readiness"></div>
+          </div>
+        </div>
+        <!-- 兜底命中与单据状态 -->
+        <div class="grid grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>兜底命中（f44）</h3></div>
+            <div id="dashboard-guardrail"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>单据状态</h3></div>
+            <div id="dashboard-orders"></div>
+          </div>
+        </div>
+        <!-- 缺货率两种分母并列说明 -->
+        <div class="panel">
+          <div class="panel-head"><h3>缺货率：两种分母并列</h3></div>
+          <div id="dashboard-stockout"></div>
+        </div>
+      </section>
+
+      <!-- 视图二：图谱溯源 -->
+      <section class="view" id="view-trace">
+        <div class="view-head">
+          <div>
+            <h2>图谱溯源</h2>
+            <p class="muted">建议 → 规则 → 证据 → 责任人，最多三跳；数字都能点回依据。</p>
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <!-- 路径查询 -->
+          <div class="panel">
+            <div class="panel-head"><h3>路径查询</h3></div>
+            <div class="form-row">
+              <label class="field grow">
+                <span>起点</span>
+                <select id="path-src"></select>
+              </label>
+              <label class="field w-90">
+                <span>跳数</span>
+                <select id="path-depth">
+                  <option value="1">1 跳</option>
+                  <option value="2" selected>2 跳</option>
+                  <option value="3">3 跳</option>
+                </select>
+              </label>
+              <button class="btn btn-primary" id="path-run" type="button">查询</button>
+            </div>
+            <div class="chain" id="path-result"><p class="muted">选择起点后查询，或用下方指标口径溯源。</p></div>
+          </div>
+          <!-- 指标口径溯源 -->
+          <div class="panel">
+            <div class="panel-head"><h3>指标口径溯源</h3></div>
+            <div class="form-row">
+              <label class="field grow">
+                <span>指标</span>
+                <select id="metric-trace-code">
+                  <option value="stockout_rate">缺货率</option>
+                  <option value="account_diff_rate">账实差异率</option>
+                  <option value="turnover_days">库存周转天数</option>
+                  <option value="waste_rate">报废率</option>
+                  <option value="shelf_restock_hours">上架时效</option>
+                </select>
+              </label>
+              <button class="btn btn-primary" id="metric-trace-run" type="button">溯源</button>
+            </div>
+            <div id="metric-trace-result" class="trace-result"><p class="muted">显示口径、签发状态与依据链。</p></div>
+          </div>
+        </div>
+        <!-- 混合检索 -->
+        <div class="panel">
+          <div class="panel-head"><h3>混合检索（向量 + FTS5）</h3><span class="muted small" id="search-mode"></span></div>
+          <div class="form-row">
+            <label class="field grow">
+              <span>关键词</span>
+              <input id="search-q" placeholder="例如：临时促销 整箱 仓容 缺货" />
+            </label>
+            <button class="btn btn-ghost" id="search-run" type="button">检索</button>
+          </div>
+          <div id="search-result" class="search-list"></div>
+        </div>
+      </section>
+
+      <!-- 视图三：建议与签核 -->
+      <section class="view" id="view-replenish">
+        <div class="view-head">
+          <div>
+            <h2>建议与签核</h2>
+            <p class="muted">生成建议 → 提交待签核 → 运营总监签核 / 商品与损耗经理驳回；管理员只能看。</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="orders-refresh" type="button">刷新单据</button>
+        </div>
+        <!-- 生成建议表单 -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>生成补货建议</h3>
+            <span class="muted small" id="suggest-actor"></span>
+          </div>
+          <div class="form-row wrap">
+            <label class="field grow">
+              <span>门店</span>
+              <select id="suggest-store"></select>
+            </label>
+            <label class="field grow">
+              <span>商品</span>
+              <select id="suggest-sku"></select>
+            </label>
+            <label class="field grow">
+              <span>业务日（可选）</span>
+              <select id="suggest-date"></select>
+            </label>
+            <button class="btn btn-primary" id="suggest-run" type="button">生成建议</button>
+          </div>
+          <!-- 兜底样例：五类确定性触发 -->
+          <div class="demo-cases" id="demo-cases"></div>
+          <div class="suggest-result" id="suggest-result"></div>
+        </div>
+        <!-- 单据列表 -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>单据列表</h3>
+            <div class="form-row">
+              <select id="orders-status" class="select-sm">
+                <option value="">全部状态</option>
+                <option value="DRAFT">草稿</option>
+                <option value="PENDING_SIGN">待签核</option>
+                <option value="SIGNED">已签核</option>
+                <option value="REJECTED">已驳回</option>
+                <option value="STOPPED">兜底停止</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="orders-table">
+              <thead>
+                <tr>
+                  <th>单号</th><th>门店</th><th>商品</th><th>业务日</th><th>状态</th>
+                  <th>建议量</th><th>最终量</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- 单据详情 / 重建 -->
+        <div class="panel" id="order-detail-panel" hidden>
+          <div class="panel-head">
+            <h3>单据详情与处置现场</h3>
+            <button class="btn btn-ghost btn-sm" id="order-detail-close" type="button">关闭</button>
+          </div>
+          <div id="order-detail"></div>
+        </div>
+      </section>
+
+      <!-- 视图四：管理与审计 -->
+      <section class="view" id="view-admin">
+        <div class="view-head">
+          <div>
+            <h2>管理与审计</h2>
+            <p class="muted">账号、审计日志与导出、数据就绪度、Agent 注册表、兜底规则；管理员只能查看，不能签核。</p>
+          </div>
+        </div>
+        <!-- 账号管理 -->
+        <div class="panel">
+          <div class="panel-head"><h3>账号管理</h3><span class="muted small">仅管理员可写；口令只写不读</span></div>
+          <div class="table-wrap">
+            <table class="table" id="users-table">
+              <thead><tr><th>账号</th><th>姓名</th><th>角色</th><th>数据域</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <form class="form-row wrap create-user" id="create-user-form">
+            <label class="field"><span>账号</span><input name="username" required minlength="3" placeholder="new.user" /></label>
+            <label class="field"><span>姓名</span><input name="display_name" required placeholder="姓名" /></label>
+            <label class="field"><span>邮箱</span><input name="email" type="email" required placeholder="a@shiguang.local" /></label>
+            <label class="field"><span>角色</span>
+              <select name="role">
+                <option value="store_manager">门店店长</option>
+                <option value="planner">补货计划员</option>
+                <option value="ops_director">运营总监</option>
+                <option value="loss_manager">商品与损耗经理</option>
+                <option value="logistics">区域物流经理</option>
+                <option value="data_engineer">数据工程师</option>
+                <option value="admin">系统管理员</option>
+              </select>
+            </label>
+            <label class="field"><span>数据域类型</span>
+              <select name="scope_type">
+                <option value="store">门店</option>
+                <option value="region">区域</option>
+                <option value="global">全局</option>
+              </select>
+            </label>
+            <label class="field"><span>数据域值</span><input name="scope_value" placeholder="S01 或 华东，可空" /></label>
+            <label class="field"><span>初始口令</span><input name="password" type="password" minlength="8" required placeholder="至少 8 位" /></label>
+            <button class="btn btn-primary" type="submit">新建账号</button>
+          </form>
+          <div class="form-error" id="create-user-error" hidden></div>
+        </div>
+        <!-- 审计日志 -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3>审计日志</h3>
+            <div class="form-row">
+              <select id="audit-decision" class="select-sm">
+                <option value="">全部决定</option>
+                <option value="allow">允许</option>
+                <option value="deny">拒绝</option>
+                <option value="sign">签核</option>
+                <option value="reject">驳回</option>
+                <option value="stop">兜底</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" id="audit-refresh" type="button">刷新</button>
+              <button class="btn btn-ghost btn-sm" id="audit-export" type="button">导出 CSV</button>
+            </div>
+          </div>
+          <div class="table-wrap table-tall">
+            <table class="table" id="audit-table">
+              <thead><tr><th>时间</th><th>操作人</th><th>角色</th><th>动作</th><th>对象</th><th>决定</th><th>错误码</th><th>详情</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="muted small" id="audit-retention"></div>
+        </div>
+        <!-- 数据就绪度与导入批次 -->
+        <div class="grid grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>数据就绪度</h3></div>
+            <div id="readiness-detail"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>导入批次</h3></div>
+            <div id="imports-detail"></div>
+          </div>
+        </div>
+        <!-- Agent 注册表与兜底规则 -->
+        <div class="grid grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>Agent 与工具注册表</h3></div>
+            <div id="agents-detail"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>兜底规则（f44 五类）</h3></div>
+            <div id="guardrail-detail"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 轻提示与确认弹窗容器 -->
+  <div class="toast-stack" id="toast-stack"></div>
+  <div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal">
+      <h3 id="modal-title">确认</h3>
+      <p id="modal-body" class="muted"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-cancel" type="button">取消</button>
+        <button class="btn btn-primary" id="modal-ok" type="button">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 原生 JS，无构建、无框架 -->
+  <script src="/app.js"></script>
+</body>
+</html>

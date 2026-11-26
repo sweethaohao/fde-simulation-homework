@@ -2,7 +2,7 @@
 
 这是一份 **FDE（Forward Deployed Engineer）九阶段流程**的课程模拟作业仓库。案例为合成场景「拾光连锁 · 货架满了，爆款却没了」，从角色访谈、现状还原一路做到四来源收敛与证据核对。
 
-仓库当前覆盖 **阶段 01 业务挖掘** 与 **阶段 02 现场调研**；阶段 03 及之后的模拟项目代码将放入 [`src/`](src/README.md)。
+仓库覆盖 **阶段 01 业务挖掘 → 阶段 02 现场调研 → 阶段 03 需求定义与 MVP 构建**。可运行的 MVP 在 [`src/`](src/README.md)：8 家门店 × 50 个常温 SKU × 42 天合成数据，五个视图（诊断看板 / 图谱溯源 / 建议与签核 / 管理与审计 / 登录），只到“待签核 + 人工签核”，不存在下单接口。
 
 > 本仓库所有人物、门店、金额、指标均为**合成训练数据**，不代表任何真实企业的授权、业务执行或客户验收。这一点在每份交付文档的开头都做了声明。
 
@@ -42,7 +42,7 @@
 
 **为什么提示词要分两份**：`BUILD_PROMPT.md` 在仓库根，是**施工图**，给编码 Agent 用，一次交付整套 MVP；`docs/门店补货与库存协同-智能体系统-提示词.md` 是阶段 03 的**作业提交件**（老师要求的提问式提示词集）。两者用途不同，不要混用。
 
-> 上面目录树中，`docs/`、`README.md`、`LICENSE`、`requirements.txt`、`BUILD_PROMPT.md`、`config.example.yaml`、`.env.example` 已存在；`src/app`、`src/web`、`scripts`、`data/seed`、`tests`、`docs/assets` 由 MVP 构建阶段按 [`BUILD_PROMPT.md`](BUILD_PROMPT.md) 第 6 节生成，当前尚未创建。
+> 目录树中的 `src/app`、`src/web`、`scripts`、`data/seed`、`tests` 已按 [`BUILD_PROMPT.md`](BUILD_PROMPT.md) 第 6 节生成并可用；`data/mvp.db` 为运行产物，已进 `.gitignore`，提交的是可复现的 `data/seed/*.csv`。
 
 ## 进度
 
@@ -56,7 +56,8 @@
 | | 3 四来源收敛与材料核对 | [`docs/作业内容分析/02-3-four-source-convergence.md`](docs/作业内容分析/02-3-four-source-convergence.md) | 已完成 |
 | 03 需求定义 | 系统方案报告 | [`docs/门店补货与库存协同-智能体系统方案报告.docx`](docs/门店补货与库存协同-智能体系统方案报告.docx) | 已完成 |
 | | 提问式提示词集 | [`docs/门店补货与库存协同-智能体系统-提示词.md`](docs/门店补货与库存协同-智能体系统-提示词.md) | 已完成 |
-| | MVP 构建 | [`BUILD_PROMPT.md`](BUILD_PROMPT.md) → `src/` | **构建中** |
+| | MVP 构建 | [`BUILD_PROMPT.md`](BUILD_PROMPT.md) → `src/`、`tests/`、`scripts/` | 已完成 |
+| | MVP 演示动线 | [`DEMO.md`](DEMO.md) | 已完成 |
 
 ## 文档索引
 
@@ -82,7 +83,7 @@
 
 ## MVP 构建（阶段 03）
 
-**入口只有一个：[`BUILD_PROMPT.md`](BUILD_PROMPT.md)。** 把整份文件交给编码 Agent，它会按四阶段产出可运行的服务。
+**入口只有一个：[`BUILD_PROMPT.md`](BUILD_PROMPT.md)。** 把整份文件交给编码 Agent，它会按四阶段产出可运行的服务；演示动线见 [`DEMO.md`](DEMO.md)。
 
 ### 谁需要什么
 
@@ -95,17 +96,48 @@
 
 模型是**运行时依赖**，不是代码。仓库只保留可复现的部分：代码、配置模板、依赖清单、合成数据、脚本。
 
-```bash
-python -m venv .venv && ./.venv/Scripts/python.exe -m pip install -r requirements.txt
-ollama pull qwen3.5:9b && ollama pull nomic-embed-text   # 需本机已装 Ollama
-cp .env.example .env                                      # 填 APP_JWT_SECRET
-python scripts/gen_data.py && python scripts/init_db.py && python scripts/seed_graph.py
-scripts/run_prod.bat                                      # http://127.0.0.1:8000
+### 运行与部署
+
+前置：Windows 10/11 + Python 3.13、本机 Ollama（`qwen3.5:9b` 与 `nomic-embed-text` 已拉取）。模型地址、端口、库路径都在 `config.yaml`，代码里没有字面量。
+
+```powershell
+# 1. 依赖
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 2. 密钥（缺失或少于 16 字符时应用拒绝启动）
+Copy-Item .env.example .env
+# 编辑 .env，填入 APP_JWT_SECRET
+
+# 3. 合成数据 → 建库 → 图谱（三步都可重复执行）
+.\.venv\Scripts\python.exe scripts\gen_data.py
+.\.venv\Scripts\python.exe scripts\init_db.py
+.\.venv\Scripts\python.exe scripts\seed_graph.py
+
+# 4. 启动（二选一）
+scripts\run_dev.bat    # 127.0.0.1:8000，热重载
+scripts\run_prod.bat   # 0.0.0.0:8000，双 worker，局域网可访问
 ```
+
+Linux / macOS 用 `scripts/run_dev.sh`、`scripts/run_prod.sh`，步骤相同（虚拟环境路径为 `.venv/bin/python`）。
+
+**生产脚本的退出码**（按施工图第 14 节）：
+
+| 退出码 | 含义 | 处理 |
+|---|---|---|
+| 2 | 连不上本机 Ollama（`127.0.0.1:11434`） | 先启动 Ollama，确认两个模型已拉取 |
+| 3 | 未设置 `APP_JWT_SECRET` | 从 `.env.example` 复制 `.env` 并填密钥 |
+| 1 | 缺少 `.venv` 或依赖 | 重做第 1 步 |
+
+**局域网访问**：生产模式监听 `0.0.0.0:8000`，同事用 `http://<本机 IP>:8000` 访问；首次需在 Windows 防火墙放行 Python/8000 端口。数据全部在本机 SQLite，不连外网、不回写任何外部系统。
+
+**启动失败对照**：`RuntimeError: APP_JWT_SECRET 未设置` → 补 `.env`；`unable to open database file` → 在仓库根执行，或先跑第 3 步建库；`/api/ready` 返回 503 → 看 `checks.llm.ok`，模型未就绪时建议链路会降级为规则基线，不影响看板与签核。
+
+**已知限制**：本地模型不可用时建议走 `degraded` 规则基线；向量检索降级 FTS5；`shelf_restock_hours` 永远 `DATA_NOT_READY`（材料里 shelved 无时间戳）；`turnover_days` 需顾明岚签发后才出数；42 天窗口测不出真实周转与报废趋势，只作护栏。
 
 ### 部署形态（说明清楚，避免误解）
 
-本仓库**不提供公网在线地址**。服务运行在本机/局域网：`http://10.51.79.169:8000`。原因是本地推理依赖 Ollama + 显卡，无法托管在 GitHub Pages 或普通静态托管上。验收证据 = 本机生产模式启动 + 局域网可访问 + `DEMO.md` 演示动线 + `docs/assets/` 截图。
+本仓库**不提供公网在线地址**。服务运行在本机/局域网（默认 `http://127.0.0.1:8000`）。原因是本地推理依赖 Ollama + 显卡，无法托管在 GitHub Pages 或普通静态托管上。验收证据 = 本机生产模式启动 + 局域网可访问 + `DEMO.md` 演示动线 + `tests/` 与 `scripts/smoke.py` 输出。
 
 ## 证据与标注约定
 
@@ -135,6 +167,7 @@ scripts/run_prod.bat                                      # http://127.0.0.1:800
 ## 复现说明
 
 - 全部文档为 Markdown，无依赖，可直接阅读
+- 自动化验证：`.\.venv\Scripts\python.exe -m pytest tests -q`（28 条用例）；`.\.venv\Scripts\python.exe scripts\smoke.py`（一条命令跑全链路，21 项检查，必要时自动拉起服务）
 - 现状流程图为 3880×2340 PNG。生成方式为 Python + Pillow 按坐标绘制（Windows 下浏览器无头截图被系统策略拦截，故未采用 HTML 转截图）；绘制时带文字宽度越界检测，避免溢出
 - MVP 依赖见 `requirements.txt`（已锁定版本），配置项见 `config.example.yaml`
 

@@ -1,0 +1,7 @@
+promo_id,store_id,sku_id,version,start_date,end_date,status,is_synthetic
+P01,S01,K001,P2026-10-temp-v1,2026-10-11,2026-10-12,temporary,1
+P02,,K004,P2026-09-v1,2026-09-08,2026-09-11,published,1
+P03,S04,K005,P2026-09-v2,2026-09-20,2026-09-24,published,1
+P04,S02,K001,P2026-09-v2,2026-09-28,2026-10-02,published,1
+P05,S01,K007,P2026-09-v1,2026-09-15,2026-09-19,published,1
+P06,S05,K012,P2026-10-v1,2026-10-02,2026-10-06,temporary,1
